@@ -10,30 +10,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM centos:7
+FROM maximo/ibmim
 
 MAINTAINER Yasutaka Nishimura <nishi2go@gmail.com>
 
-ARG fp=7
+ARG fp=2
 
 ARG url=http://images
+ARG httpport=80
+ARG installfp=yes
+ARG skin=iot18
 
 ENV TEMP /tmp
 WORKDIR /tmp
 
-RUN yum update -y && yum install -y wget unzip nc which && yum clean all
-
-# Install IBM Installation Manager 1.8
-ENV IM_IMAGE agent.installer.linux.gtk.x86_64_1.8.0.20140902_1503.zip
-
-RUN mkdir /Install_Mgr && wget -q $url/$IM_IMAGE \
- && unzip -q -d /Install_Mgr $IM_IMAGE \
- && rm $IM_IMAGE \
- && /Install_Mgr/installc -log /tmp/IM_Install_Unix.xml -acceptLicense \
- && rm -rf /Install_Mgr
-
-## Update Installation Manager
-RUN /opt/IBM/InstallationManager/eclipse/tools/imcl install com.ibm.cic.agent
+# Install required packages
+RUN apt update && apt install -y netcat inetutils-ping && rm -rf /var/lib/apt/lists/*
 
 ## Install Maximo middleware and installer
 RUN mkdir /Launchpad
@@ -41,24 +33,29 @@ WORKDIR /Launchpad
 
 ENV BYPASS_PRS=True
 
-## Install Maximo V7.6
-ENV MAM_IMAGE MAM_7.6.0.0_LINUX64.tar.gz
-RUN wget -q $url/$MAM_IMAGE && tar zxpf $MAM_IMAGE \
+## Install Maximo V7.6.1
+ENV MAM_IMAGE MAM_7.6.1_LINUX64.tar.gz
+## Remove z from tar command because file is not gzipped despite having gz extension
+RUN wget -q $url/$MAM_IMAGE && tar xpf $MAM_IMAGE \
  && /opt/IBM/InstallationManager/eclipse/tools/imcl \
- -input /Launchpad/SilentResponseFiles/Installer/Unix/ResponseFile_MAM_Install_Unix.xml \
+ -input /Launchpad/SilentResponseFiles/Unix/ResponseFile_MAM_Install_Unix.xml \
  -acceptLicense -log /tmp/MAM_Install_Unix.xml \
  && rm $MAM_IMAGE
 
-## Install Maximo V7.6.0.7 feature packs
 RUN mkdir /work
 WORKDIR /work
-ENV MAM_FP_IMAGE MAMMTFP760${fp}IMRepo.zip
 
-RUN wget -q $url/$MAM_FP_IMAGE && sleep 30 \
+# Install Maximo V7.6.1 feature pack
+
+ENV MAM_FP_IMAGE MAMMTFP761${fp}IMRepo.zip
+RUN if [ "${installfp}" = "yes" ]; then wget -q $url/$MAM_FP_IMAGE && sleep 30 \
+ && /opt/IBM/InstallationManager/eclipse/tools/imcl install \
+ com.ibm.tivoli.tpae.base.tpae.main -repositories /work/$MAM_FP_IMAGE \
+ -installationDirectory /opt/IBM/SMP -log /tmp/FP_Install_Unix.xml -acceptLicense \
  && /opt/IBM/InstallationManager/eclipse/tools/imcl install \
  com.ibm.tivoli.tpae.base.mam.main -repositories /work/$MAM_FP_IMAGE \
  -installationDirectory /opt/IBM/SMP -log /tmp/FP_Install_Unix.xml -acceptLicense \
- && rm $MAM_FP_IMAGE
+ && rm $MAM_FP_IMAGE; fi
 
 ENV MAXADMIN_PASSWORD maxadmin
 ENV MAXREG_PASSWORD maxreg
@@ -66,6 +63,10 @@ ENV MXINTADM_PASSWORD mxintadm
 ENV BASE_LANG en
 ENV ADMIN_EMAIL_ADDRESS root@localhost
 ENV SMTP_SERVER_HOST_NAME localhost
+ENV DB_VENDOR DB2
+ENV DB_TABLE_SPACE MAXDATA
+ENV DB_TEMP_SPACE MAXTEMP
+ENV DB_INDEX_SPACE MAXINDEX
 ENV MAXDB MAXDB76
 ENV DB_HOST_NAME maxdb
 ENV DB_PORT 50005
@@ -79,21 +80,23 @@ ENV WAS_DM_NODE_NAME ctgCellManager01
 ENV WAS_NODE_NAME ctgNode01
 ENV WEB_SERVER_NAME webserver1
 ENV WEB_SERVER_HOST_NAME maxweb
-ENV WEB_SERVER_PORT 80
+ENV WEB_SERVER_PORT ${httpport}
 ENV APP_SERVER_HOST_NAME maxapps
 ENV APP_SERVER_PORT 8878
+ENV UPDATE_APPS_ON_REBOOT yes
 
 RUN wget -q https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh \
     && mv wait-for-it.sh /usr/local/bin && chmod +x /usr/local/bin/wait-for-it.sh
 
-RUN wget -q https://raw.githubusercontent.com/wsadminlib/wsadminlib/master/bin/wsadminlib.py \
-    && mv wsadminlib.py /opt
+RUN wget -q https://raw.githubusercontent.com/wsadminlib/wsadminlib/master/bin/wsadminlib.py
 
-COPY StopAllServers.py /opt
-COPY StartAllServers.py /opt
-COPY AddVirtualHosts.py /opt
-COPY SetAutoRestart.py /opt
+COPY StopAllServers.py /work
+COPY StartAllServers.py /work
+COPY AddVirtualHosts.py /work
+COPY SetAutoRestart.py /work
+
+ENV SKIN=${skin}
 
 COPY startinstall.sh /work
-RUN chmod +x startinstall.sh
+RUN chmod +x /work/startinstall.sh
 ENTRYPOINT ["/work/startinstall.sh"]

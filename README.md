@@ -1,110 +1,233 @@
-# Building and deploying an IBM Maximo Asset Management V7.6 with Feature Pack image
-------------------------------------------------------------------------------------
+### Liberty version is here: https://github.com/nishi2go/maximo-liberty-docker
 
-The following instructions can be used to build an IBM Maximo Asset Management image for V7.6. This images consist of several components e.g. WebSphere, DB2, and Maximo installation program.
 
-![Componets of Docker Images](https://raw.githubusercontent.com/nishi2go/maximo-docker/master/maximo-docker.png)
+# Building and deploying an IBM Maximo Asset Management V7.6 with Feature Pack image to Docker
+
+Maximo on Docker enables to run Maximo Asset Management on Docker. The images are deployed fine-grained services instead of single instance. The following instructions describe how to set up IBM Maximo Asset Management V7.6 Docker images. This images consist of several components e.g. WebSphere, Db2, and Maximo installation program.
+
+![Componets of Docker Images](https://raw.githubusercontent.com/nishi2go/maximo-docker/master/maximo-docker.svg?sanitize=true)
 
 ## Required packages
---------------------
 
-* IBM Installation Manager binaries from [Installation Manager 1.8 download documents](http://www-01.ibm.com/support/docview.wss?uid=swg24037640)
+* IBM Maximo Asset Management V7.6.1 binaries from [Passport Advantage](http://www-01.ibm.com/software/passportadvantage/pao_customer.html)
 
-  IBM Installation Manager binaries:
-  * agent.installer.linux.gtk.x86_64_1.8.0.20140902_1503.zip
+  IBM Enterprise Deployment (formerly known as IBM Installation Manager) binaries:
+  * IED_V1.8.8_Wins_Linux_86.zip
 
-* IBM Maximo Asset Management V7.6 binaries from [Passport Advantage](http://www-01.ibm.com/software/passportadvantage/pao_customer.html)
+  IBM Maximo Asset Management V7.6.1 binaries:
+  * MAM_7.6.1_LINUX64.tar.gz
 
-  IBM Maximo Asset Manament V7.6 binaries:
-  * MAM_7.6.0.0_LINUX64.tar.gz
+  IBM WebSphere Application Server traditional V9 binaries:
+  * WAS_ND_V9.0_MP_ML.zip
 
-  IBM WebSphere Application Server Network Deployment V8.5.5 binaries:
-  * WASND_v8.5.5_1of3.zip
-  * WASND_v8.5.5_2of3.zip
-  * WASND_v8.5.5_3of3.zip
+  IBM HTTP Server and WebSphere Plugin V9 binaries:
+  * was.repo.9000.ihs.zip
+  * was.repo.9000.plugins.zip
 
-  IBM WebSphere Application Server Network Deployment Supplments V8.5.5 binaries:
-  * WAS_V8.5.5_SUPPL_1_OF_3.zip
-  * WAS_V8.5.5_SUPPL_2_OF_3.zip
-  * WAS_V8.5.5_SUPPL_3_OF_3.zip
+  IBM Java SDK V8 binaries:
+  * sdk.repo.8030.java8.linux.zip
 
-  IBM DB2 Enterprise Edition V10.5 and license that is bundled into Maximo binaries:
-  * DB2_Svr_V10.5_Linux_x86-64.tar.gz
-  * DB2_ESE_Restricted_QS_Act_V10.5.zip
+  IBM Db2 Advanced Workgroup Edition V11.1 binaries:
+  * DB2_AWSE_REST_Svr_11.1_Lnx_86-64.tar.gz
 
-* Feature Pack / Fix Pack binaries from [Fix Central](http://www-933.ibm.com/support/fixcentral/)
+* Feature Pack/Fix Pack binaries from [Fix Central](http://www-933.ibm.com/support/fixcentral/)
 
-  IBM Maximo Asset Manament V7.6 Feature Pack 7 binaries:
-  * MAMMTFP7607IMRepo.zip
+  IBM Maximo Asset Management V7.6.1 Feature pack 2 binaries:
+  * MAMMTFP7612IMRepo.zip
 
-  IBM WebSphere Application Server Network Deployment Fixpack V8.5.5.11 binaries:
-  * 8.5.5-WS-WAS-FP011-part1.zip
-  * 8.5.5-WS-WAS-FP011-part2.zip
-  * 8.5.5-WS-WAS-FP011-part3.zip
+  IBM WebSphere Application Server traditional Fixpack V9.0.0.10 binaries:
+  * 9.0.0-WS-WAS-FP010.zip
 
-  IBM WebSphere Application Server Network Deployment Supplements Fixpack V8.5.5.11 binaries:
-  * 8.5.5-WS-WASSupplements-FP011-part1.zip
-  * 8.5.5-WS-WASSupplements-FP011-part2.zip
-  * 8.5.5-WS-WASSupplements-FP011-part3.zip
+  IBM HTTP Server Fixpack V9.0.0.10 binaries:
+  * 9.0.0-WS-IHSPLG-FP010.zip
 
-  IBM WebSphere SDK Java Technology Edition V7.1.3.60 binaries:
-  * 7.1.3.60-WS-IBMWASJAVA-Linux.zip
+  IBM Java SDK Fixpack V8.0.5.25 Installation Manager Repository binaries:
+  * ibm-java-sdk-8.0-5.25-linux-x64-installmgr.zip
 
-  IBM DB2 Universal V10.5 Fix Pack 7
-  * v10.5fp7_linuxx64_server_t.tar.gz
+  IBM Db2 Server V11.1 Fix Pack 4 Mod 1
+  * v11.1.4fp4a_linuxx64_server_t.tar.gz
 
-## Building the IBM Maximo Asset Management V7.6 image
-------------------------------------------------------
+## Building IBM Maximo Asset Management V7.6 images by using build tool
 
-Prereq: all binaries should be accessible via a web server during building phase.
+Prerequisites: all binaries must be accessible via a web server during building phase.
 
-1. Place the downloaded IBM Installation Manager and IBM WebSphere Application Server traditional binaries on a directory
+You can use a tool for building docker images by using the build tool.
+
+Usage:
+```
+Usage: build.sh [DIR] [OPTION]...
+
+-c | --check            Check required packages
+-C | --deepcheck        Check and compare checksum of required packages
+-r | --remove           Remove images when an image exists in repository
+-d | --check-dir [DIR]  The directory for validating packages (Docker for Windows only)
+-h | --help             Show this help text
+```
+
+Procedures:
+1. Place the downloaded Maximo, IBM Db2, IBM Installation Manager and IBM WebSphere Application Server traditional binaries on a directory.
+2. Clone this repository.
+    ```bash
+    git clone https://github.com/nishi2go/maximo-docker.git
+    ```
+3. Move to the directory.
+    ```bash
+    cd maximo-docker
+    ```
+4. Run build tool.
+   ```bash
+   bash build.sh [Image directory] [-c] [-C] [-r]
+   ```
+
+   Example:
+   ```bash
+   bash build.sh /images -c -r
+   ```
+
+   Example for Docker for Windows:
+   ```bash
+   bash build.sh "C:/images" -c -r -d /images
+   ```
+   Note 1: This script works on Windows Subsystem on Linux.<br>
+   Note 2: md5sum is required. For Mac, install it manually - https://raamdev.com/2008/howto-install-md5sum-sha1sum-on-mac-os-x/
+5. Run containers by using the Docker Compose file to create and deploy new instances.
+    ```bash
+    docker-compose up -d
+    ```
+    Note: It will take 3-4 hours (depend on your machine spec) to complete the installation.
+    Note: To change the default passwords, edit \[COMPONENT\]_PASSWORD environment variables in docker-compose.yml file. Do not use a different value to the same environment variable across services.
+6. Make sure to be accessible to Maximo login page: http://hostname/maximo
+
+## Building IBM Maximo Asset Management V7.6 images by manually
+
+Prerequisites: all binaries must be accessible via a web server during building phase.
+
+Procedures:
+1. Place the downloaded Maximo, IBM Db2, IBM Installation Manager and IBM WebSphere Application Server traditional binaries on a directory
 2. Create docker network for build with:
     ```bash
     docker network create build
     ```
-3. Run nginx docker image to be able to download binaries from HTTP
+3. Run nginx docker image to be able to download binaries from HTTP.
     ```bash
     docker run --name images -h images --network build \
-    -v <Image directory>:/usr/share/nginx/html:ro -d nginx
+    -v [Image directory]:/usr/share/nginx/html:ro -d nginx
     ```
-4. Clone this repository
+4. Clone this repository.
     ```bash
     git clone https://github.com/nishi2go/maximo-docker.git
     ```
-5. Move to the directory
+5. Move to the directory.
     ```bash
     cd maximo-docker
     ```
 6. Build Docker images:
-    Build DB2 image:
+    Build Db2 image:
     ```bash
-    docker build -t maximo/db2:10.5.0.7 -t maximo/db2:latest --network build maxdb
+    docker build -t maximo/db2:11.1.4a -t maximo/db2:latest --network build maxdb
+    ```
+    Build IBM Enterprise Deployment (IBM Installation Manager) image:
+    ```bash
+    docker build -t maximo/ibmim:1.8.8 -t maximo/ibmim:latest --network build ibmim
     ```
     Build WebSphere Application Server base image:
     ```bash
-    docker build -t maximo/maxwas:8.5.5.11 -t maximo/maxwas:latest --network build maxwas
+    docker build -t maximo/maxwas:9.0.0.10 -t maximo/maxwas:latest --network build maxwas
     ```
     Build WebSphere Application Server Deployment Manager image:
     ```bash
-    docker build -t maximo/maxdmgr:8.5.5.11 -t maximo/maxdmgr:latest maxdmgr
+    docker build -t maximo/maxdmgr:9.0.0.10 -t maximo/maxdmgr:latest maxdmgr
     ```
     Build WebSphere Application Server AppServer image:
     ```bash
-    docker build -t maximo/maxapps:8.5.5.11 -t maximo/maxapps:latest maxapps
+    docker build -t maximo/maxapps:9.0.0.10 -t maximo/maxapps:latest maxapps
     ```
     Build IBM HTTP Server image:
     ```bash
-    docker build -t maximo/maxweb:8.5.5.11 -t maximo/maxweb:latest --network build maxweb
+    docker build -t maximo/maxweb:9.0.0.10 -t maximo/maxweb:latest --network build maxweb
     ```
     Build Maximo Asset Management Installation image:
     ```bash
-    docker build -t maximo/maximo:7.6.0.7 -t maximo/maximo:latest --network build maximo
+    docker build -t maximo/maximo:7.6.1.2 -t maximo/maximo:latest --network build maximo
     ```
     Note: If the build has failed during Maximo Feature Pack installation, run the docker build again.
-7. Run containers by using the Docker Compose file to create and deploy instances:
+7. Run containers by using the Docker Compose file to create and deploy new instances.
     ```bash
     docker-compose up -d
     ```
-    Note: It will take 3-4 hours (depend on your machine) to complete the installation.
+    Note: It will take 3-4 hours (depend on your machine spec) to complete the installation.
+    Note: To change the default passwords, edit \[COMPONENT\]_PASSWORD environment variables in docker-compose.yml file. Do not use a different value to the same environment variable across services.
 8. Make sure to be accessible to Maximo login page: http://hostname/maximo
+
+## Building IBM Maximo Asset Management V7.6 images with an Oracle Database Container by using build tool
+
+### Prerequisites:
+- All binaries must be accessible via a web server during building phase.
+- An Oracle Database containar or any on-premise instance must be prepared before running docker-compose command.
+  - Follow the guide from the [repo](https://github.com/oracle/docker-images/tree/master/OracleDatabase) to create an Oracle Database container.
+
+Procedures:
+1. Place the downloaded Maximo, IBM Db2, IBM Installation Manager and IBM WebSphere Application Server traditional binaries on a directory.
+2. Clone this repository.
+    ```bash
+    git clone https://github.com/nishi2go/maximo-docker.git
+    ```
+3. Move to the directory.
+    ```bash
+    cd maximo-docker
+    ```
+4. Run build tool.
+   ```bash
+   bash build.sh [Image directory] [-c] [-C] [-r]
+   ```
+
+   Example:
+   ```bash
+   bash build.sh /images -c -r
+   ```
+
+   Example for Docker for Windows:
+   ```bash
+   bash build.sh "C:/images" -c -r -d /images
+   ```
+   Note 1: This script works on Windows Subsystem on Linux.<br>
+   Note 2: md5sum is required. For Mac, install it manually - https://raamdev.com/2008/howto-install-md5sum-sha1sum-on-mac-os-x/
+5. Run containers by using the Docker Compose file to create and deploy new instances.
+    ```bash
+    docker-compose -f docker-compose.ora.yml up -d
+    ```
+    Note: It will take 3-4 hours (depend on your machine spec) to complete the installation.
+    Note: To change the default passwords, edit \[COMPONENT\]_PASSWORD environment variables in docker-compose.yml file. Do not use a different value to the same environment variable across services.
+6. Make sure to be accessible to Maximo login page: http://hostname/maximo
+
+
+## Skip the maxinst process in starting up the maxdb container by using Db2 restore command
+
+[Maxinst program](http://www-01.ibm.com/support/docview.wss?uid=swg21314938) supports to initialize and create a Maximo database that called during the "deployConfiguration" process in the Maximo installer. This process is painfully slow because it creates more than thousand tables from scratch. To skip the process, you can use a backup database to restore during first boot time in a maxdb service. So then, it can reduce the creation time for containers from second time.
+
+Procedures:
+1. Build container images first (follow above instructions)
+2. Move to the cloned directory.
+    ```bash
+    cd maximo-docker
+    ```
+3. Make a backup directory.
+    ```bash
+    mkdir ./backup
+    ```
+4. Uncomment the following volume configuration in docker-compose.yml.
+    ```yaml
+      maxdb:
+        volumes:
+          - type: bind
+            source: ./backup
+            target: /backup
+    ```
+5. Run containers by using the Docker Compose file. (follow above instructions)
+6. Take a backup from the maxdb service by using a backup tool.
+    ```bash
+    docker-compose exec maxdb /work/backup.sh maxdb76 /backup
+    ```
+    Note: Backup image must be only one in the directory. Backup task must fail when more than two images in it.
+
+So that, now you can create the containers from the backup image that is stored in the directory.

@@ -1,5 +1,5 @@
 """
-   Copyright Yasutaka Nishimura 2017
+   Copyright Yasutaka Nishimura 2017, 2019
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -14,9 +14,19 @@
    limitations under the License.
 """
 
-execfile('/opt/wsadminlib.py')
+
+def load_wsadminlib(filename):
+    global enableDebugMessages, listAllAppServers, stopServer
+    exec(open(filename).read())
+
+
+# Try execfile first for Jython
+filename = '/work/wsadminlib.py'
+try:
+    execfile(filename)
+except NameError:
+    load_wsadminlib()
 
 enableDebugMessages()
-
 for (nodename, servername) in listAllAppServers():
     stopServer(nodename, servername)

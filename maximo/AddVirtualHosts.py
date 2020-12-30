@@ -1,5 +1,5 @@
 """
-   Copyright Yasutaka Nishimura 2017
+   Copyright Yasutaka Nishimura 2017, 2019
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -13,8 +13,23 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
+import sys
 
-execfile('/opt/wsadminlib.py')
+
+def load_wsadminlib(filename):
+    global addHostAlias, enableDebugMessages, hostAliasExists, save
+    exec(open(filename).read())
+
+
+# User defined web server port
+port = sys.argv[0]
+
+# Try execfile first for Jython
+filename = '/work/wsadminlib.py'
+try:
+    execfile(filename)
+except NameError:
+    load_wsadminlib()
 
 enableDebugMessages()
 
@@ -23,4 +38,8 @@ if not hostAliasExists('maximo_host', '*', 80):
 
 if not hostAliasExists('maximo_host', '*', 443):
     addHostAlias('maximo_host', '*', 443)
+
+if not hostAliasExists('maximo_host', '*', port):
+    addHostAlias('maximo_host', '*', port)
+
 save()

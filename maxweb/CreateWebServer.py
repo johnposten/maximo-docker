@@ -1,5 +1,5 @@
 """
-   Copyright Yasutaka Nishimura 2017
+   Copyright Yasutaka Nishimura 2017, 2019
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -14,16 +14,27 @@
    limitations under the License.
 """
 
-execfile('/opt/wsadminlib.py')
+import sys
 
-nodeName = sys.argv[0]
-webServerName = sys.argv[1]
-webServerPort = sys.argv[2]
-httpServerHome = sys.argv[3]
-webspherePluginHome = sys.argv[4]
 
+def load_wsadminlib(filename):
+    global createWebserver, enableDebugMessages, generatePluginCfg, saveAndSyncAndPrintResult
+    with open(filename) as in_file:
+        exec(in_file.read())
+
+
+# Try execfile first for Jython
+filename = '/work/wsadminlib.py'
+try:
+    execfile(filename)
+except NameError:
+    load_wsadminlib()
+
+nodeName, webServerName, webServerPort, httpServerHome, webspherePluginHome = sys.argv[:5]
+
+enableDebugMessages()
 createWebserver(webServerName, nodeName, webServerPort, httpServerHome, webspherePluginHome,
-    httpServerHome + '/conf/httpd.conf', 'ALL', '8008', 'admin', 'password')
+                httpServerHome + '/conf/httpd.conf', 'ALL', '8008', 'admin', 'password')
 saveAndSyncAndPrintResult()
 
 generatePluginCfg(webServerName, nodeName)

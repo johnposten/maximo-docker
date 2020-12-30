@@ -12,12 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+function sigterm_handler {
+  $WAS_HOME/profiles/$PROFILE_NAME/bin/stopManager.sh \
+    -username "$DMGR_ADMIN_USER" -password "$DMGR_ADMIN_PASSWORD"
+}
+
 ## Create WebSphere Deployment Manager profile
 PROFILE_PATH=$WAS_HOME/profiles/$PROFILE_NAME
 if [ ! -d "$PROFILE_PATH" ] ; then
     $WAS_HOME/bin/manageprofiles.sh \
       -create \
-      -templatePath $WAS_HOME/profileTemplates/dmgr \
+      -templatePath $WAS_HOME/profileTemplates/management \
       -hostName `hostname -f` \
       -profileName $PROFILE_NAME \
       -profilePath $PROFILE_PATH \
@@ -30,6 +35,8 @@ fi
 
 # Start DM
 $WAS_HOME/profiles/$PROFILE_NAME/bin/startManager.sh
+
+trap sigterm_handler SIGTERM
 
 # Watch and wait the DM process
 while :

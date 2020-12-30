@@ -12,7 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+function sigterm_handler {
+  su - ctginst1 <<- EOS
+    db2 connect to $MAXDB
+    db2 terminate
+    db2 force applications all
+    db2stop force
+    ipclean -a
+EOS
+}
+
 chown ctginst1.ctggrp1 $MAXDB_DATADIR
+
+DB2_PATH=/opt/ibm/db2/V11.1
 
 #copy skel files
 if [ ! -f "/home/ctginst1/.bashrc" ]
@@ -23,17 +35,12 @@ fi
 # Change user passwords
 echo "ctginst1:$CTGINST1_PASSWORD" | chpasswd
 echo "ctgfenc1:$CTGFENC1_PASSWORD" | chpasswd
-echo "dasusr1:$DASUSR1_PASSWORD" | chpasswd
-echo "maximo:$MAXIMO_PASSWORD" | chpasswd
+echo "maximo:$DB_MAXIMO_PASSWORD" | chpasswd
 
 if [ ! -d "/home/ctginst1/sqllib" ]
 then
-    #Set up DAS
-    /opt/ibm/db2/V10.5/instance/dascrt -u dasusr1
-    su - dasusr1 -c '/opt/ibm/db2/V10.5/das/bin/db2admin start'
-
     rm -rf /home/ctginst1/*
-    /opt/ibm/db2/V10.5/instance/db2icrt -s ese -u ctgfenc1 -p 50005 ctginst1
+    ${DB2_PATH}/instance/db2icrt -s ese -u ctgfenc1 -p 50005 ctginst1
     su - ctginst1 <<- EOS
     db2start
     db2 update dbm config using SVCENAME 50005 DEFERRED
@@ -111,17 +118,31 @@ then
     db2stop force
 EOS
 
-    # Enable Fault Monitor
-    /opt/ibm/db2/V10.5/bin/db2fmcu -u -p /opt/ibm/db2/V10.5/bin/db2fmcd
-    /opt/ibm/db2/V10.5/bin/db2fm -i ctginst1 -U
-    /opt/ibm/db2/V10.5/bin/db2fm -i ctginst1 -u
-    /opt/ibm/db2/V10.5/bin/db2fm -i ctginst1 -f on
+  for f in "$BACKUPDIR/$MAXDB.*"
+  do
+    su - ctginst1 <<- EOS
+      db2start
+      db2 restore database $MAXDB from $BACKUPDIR with 4 buffers buffer 2048 replace existing parallelism 3 without prompting
+      db2 terminate
+      db2stop
+EOS
+    break
+  done
+
 fi
 
-su - dasusr1 -c '/opt/ibm/db2/V10.5/das/bin/db2admin start'
-su - ctginst1 -c db2start
+su - ctginst1 <<- EOS
+  ipclean -a
+  db2start
+EOS
+
+trap sigterm_handler SIGTERM
 
 # Wait until DB2 port is opened
+until ncat localhost 50005 >/dev/null 2>&1; do
+  sleep 10
+done
+
 while ncat localhost 50005 >/dev/null 2>&1; do
   sleep 10
 done
